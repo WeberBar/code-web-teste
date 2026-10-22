@@ -1,0 +1,7 @@
+node_modules/
+dist/
+public/iframes/
+picode-palco/
+code_hub/
+.DS_Store
+Thumbs.db

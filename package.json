@@ -1,0 +1,14 @@
+{
+  "name": "code-web-teste",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Simulador do Hub Web PiCode com Code Lab (Palco + Code Hub Upload Mode em iframes gerados automaticamente no build)",
+  "scripts": {
+    "build:iframes": "node scripts/build-iframes.js",
+    "build": "node scripts/build.js",
+    "start": "node scripts/server.js",
+    "dev": "node scripts/server.js",
+    "serve:fast": "node scripts/server.js --skip-build"
+  }
+}
+
