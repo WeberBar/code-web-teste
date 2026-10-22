@@ -62,8 +62,13 @@ function resolveRepoDir(target) {
       return candidate;
     }
   }
-  // Fallback para ambientes de CI/Deploy onde o repositório irmão não está presente
-  const cloneDest = target.candidates[0];
+  // Em ambientes de deploy (ex: Vercel) onde os repositórios privados irmãos não estão presentes,
+  // utiliza o build já gerado em public/iframes/<id> se existir.
+  if (fs.existsSync(path.join(target.outputDir, 'index.html'))) {
+    return null;
+  }
+  const cloneDest = path.join(ROOT_DIR, '.cache-repos', target.id);
+  fs.mkdirSync(path.dirname(cloneDest), { recursive: true });
   console.log(`[${target.id}] Repositório não encontrado localmente. Clonando ${target.gitUrl}...`);
   const cloneRes = spawnSync('git', ['clone', '--depth', '1', target.gitUrl, cloneDest], {
     stdio: 'inherit',
@@ -95,6 +100,10 @@ function ensureDependencies(repoDir, target) {
 function buildTarget(target) {
   const startTime = Date.now();
   const repoDir = resolveRepoDir(target);
+  if (!repoDir) {
+    console.log(`✅ [${target.name}] Usando build pré-compilado em ${target.outputDir}`);
+    return;
+  }
   const webpackBin = ensureDependencies(repoDir, target);
 
   console.log(`\n============================================================`);

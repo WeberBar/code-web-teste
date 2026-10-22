@@ -1,6 +1,6 @@
 node_modules/
 dist/
-public/iframes/
+.cache-repos/
 picode-palco/
 code_hub/
 .DS_Store
