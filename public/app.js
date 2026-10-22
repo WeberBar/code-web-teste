@@ -181,11 +181,81 @@
 
   const fullscreenIdeOverlay = document.getElementById('fullscreen-ide-overlay');
   const btnExitFullscreenIde = document.getElementById('btn-exit-fullscreen-ide');
+  const ideTopRightControls = document.querySelector('.ide-top-right-controls');
 
   const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
   const btnCollapseSidebar = document.getElementById('btn-collapse-sidebar');
   const iframePalco = document.getElementById('iframe-palco');
   const iframeCode = document.getElementById('iframe-code');
+
+  const observedBodies = new WeakSet();
+
+  function hasOpenModalInIframe(iframe) {
+    try {
+      const doc = iframe && iframe.contentDocument;
+      if (!doc || !doc.body) return false;
+      if (doc.body.classList && doc.body.classList.contains('ReactModal__Body--open')) {
+        return true;
+      }
+      if (
+        doc.querySelector(
+          '[class*="modal_modal-overlay"], [class*="modal-overlay"], .ReactModal__Overlay, [class*="stage-wrapper_full-screen"]'
+        )
+      ) {
+        return true;
+      }
+    } catch (e) {
+      // ignora
+    }
+    return false;
+  }
+
+  function syncExitButtonVisibility() {
+    if (!ideTopRightControls) return;
+    const activeIframe = activeCodeMode === 'palco' ? iframePalco : iframeCode;
+    const modalOpen = hasOpenModalInIframe(activeIframe);
+    ideTopRightControls.classList.toggle('modal-open', modalOpen);
+  }
+
+  function attachIframeModalObserver(iframe) {
+    try {
+      const doc = iframe && iframe.contentDocument;
+      if (!doc || !doc.body) return;
+      if (observedBodies.has(doc.body)) {
+        syncExitButtonVisibility();
+        return;
+      }
+      observedBodies.add(doc.body);
+
+      const observer = new MutationObserver(() => {
+        syncExitButtonVisibility();
+      });
+
+      observer.observe(doc.body, {
+        attributes: true,
+        attributeFilter: ['class'],
+        childList: true,
+        subtree: true,
+      });
+
+      syncExitButtonVisibility();
+    } catch (e) {
+      // ignora
+    }
+  }
+
+  [iframePalco, iframeCode].forEach((iframe) => {
+    if (!iframe) return;
+    iframe.addEventListener('load', () => {
+      attachIframeModalObserver(iframe);
+    });
+  });
+
+  setInterval(() => {
+    attachIframeModalObserver(iframePalco);
+    attachIframeModalObserver(iframeCode);
+    syncExitButtonVisibility();
+  }, 200);
 
   function triggerIframeResize(iframe) {
     try {
@@ -203,6 +273,8 @@
     }
     fullscreenIdeOverlay.classList.add('active');
     const activeIframe = activeCodeMode === 'palco' ? iframePalco : iframeCode;
+    attachIframeModalObserver(activeIframe);
+    syncExitButtonVisibility();
     setTimeout(() => triggerIframeResize(activeIframe), 30);
     setTimeout(() => triggerIframeResize(activeIframe), 150);
   }
@@ -218,6 +290,8 @@
     iframeCode.classList.toggle('active', activeCodeMode === 'code');
 
     const activeIframe = activeCodeMode === 'palco' ? iframePalco : iframeCode;
+    attachIframeModalObserver(activeIframe);
+    syncExitButtonVisibility();
     setTimeout(() => triggerIframeResize(activeIframe), 30);
     setTimeout(() => triggerIframeResize(activeIframe), 150);
   }

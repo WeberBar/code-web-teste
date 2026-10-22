@@ -1057,6 +1057,13 @@ body.dark-mode {
   transform: scale(1.08);
 }
 
+.ide-top-right-controls.modal-open {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 .codelab-editor-stage {
   position: relative;
   flex: 1;
