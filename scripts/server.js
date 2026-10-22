@@ -13,7 +13,8 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
 const PORT = Number(process.env.PORT) || 3000;
 
-const skipBuild = process.argv.includes('--skip-build');
+const isVercel = Boolean(process.env.VERCEL);
+const skipBuild = process.argv.includes('--skip-build') || isVercel;
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -123,4 +124,6 @@ server.listen(PORT, () => {
   console.log(`🤖 Iframe Code (Upload Mode):      http://localhost:${PORT}/iframes/code/index.html`);
   console.log(`============================================================\n`);
 });
+
+module.exports = server;
 

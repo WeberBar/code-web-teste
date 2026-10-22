@@ -152,7 +152,9 @@ function buildTarget(target) {
 
 function buildAllIframes() {
   const totalStart = Date.now();
-  fs.mkdirSync(PUBLIC_IFRAMES_DIR, { recursive: true });
+  if (!fs.existsSync(PUBLIC_IFRAMES_DIR)) {
+    fs.mkdirSync(PUBLIC_IFRAMES_DIR, { recursive: true });
+  }
 
   for (const target of TARGETS) {
     buildTarget(target);
