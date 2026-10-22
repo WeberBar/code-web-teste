@@ -1,8 +1,8 @@
 /**
  * Servidor HTTP para o simulador do Hub Web PiCode.
- * Ao subir o site (`npm start` ou `npm run dev`), compila automaticamente
+ * Ao subir o site localmente (`npm start` ou `npm run dev`), compila automaticamente
  * o Palco (picode-palco) e o Code (code_hub) para os iframes antes de iniciar,
- * a menos que a flag `--skip-build` seja informada.
+ * a menos que a flag `--skip-build` seja informada ou esteja em ambiente serverless (Vercel).
  */
 const http = require('http');
 const fs = require('fs');
@@ -15,6 +15,12 @@ const PORT = Number(process.env.PORT) || 3000;
 
 const isVercel = Boolean(process.env.VERCEL);
 const skipBuild = process.argv.includes('--skip-build') || isVercel;
+
+// Referência explícita ao index.html para garantir inclusão no bundle serverless da Vercel (NFT)
+const INDEX_HTML_PATH = path.join(PUBLIC_DIR, 'index.html');
+const INDEX_HTML_BUFFER = fs.existsSync(INDEX_HTML_PATH)
+  ? fs.readFileSync(INDEX_HTML_PATH)
+  : null;
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -43,21 +49,23 @@ const MIME_TYPES = {
   '.map': 'application/json',
 };
 
-if (!skipBuild) {
-  console.log('🚀 Subindo o site Hub Web Simulator — iniciando build automático do Palco e do Code para os iframes...');
-  buildAllIframes();
-} else {
-  const palcoIndex = path.join(PUBLIC_DIR, 'iframes', 'palco', 'index.html');
-  const codeIndex = path.join(PUBLIC_DIR, 'iframes', 'code', 'index.html');
-  if (!fs.existsSync(palcoIndex) || !fs.existsSync(codeIndex)) {
-    console.log('⚠️ Iframes ainda não encontrados em public/iframes — executando build inicial...');
+if (!isVercel) {
+  if (!skipBuild) {
+    console.log('🚀 Subindo o site Hub Web Simulator — iniciando build automático do Palco e do Code para os iframes...');
     buildAllIframes();
+  } else {
+    const palcoIndex = path.join(PUBLIC_DIR, 'iframes', 'palco', 'index.html');
+    const codeIndex = path.join(PUBLIC_DIR, 'iframes', 'code', 'index.html');
+    if (!fs.existsSync(palcoIndex) || !fs.existsSync(codeIndex)) {
+      console.log('⚠️ Iframes ainda não encontrados em public/iframes — executando build inicial...');
+      buildAllIframes();
+    }
   }
 }
 
-const server = http.createServer((req, res) => {
+function requestHandler(req, res) {
   try {
-    const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    const parsedUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
     let pathname = decodeURIComponent(parsedUrl.pathname);
 
     // Redireciona /iframes/palco -> /iframes/palco/ para preservar caminhos relativos
@@ -65,6 +73,25 @@ const server = http.createServer((req, res) => {
       res.writeHead(302, { Location: `${pathname}/${parsedUrl.search}` });
       res.end();
       return;
+    }
+
+    if (pathname === '/' || pathname === '/index.html') {
+      if (fs.existsSync(INDEX_HTML_PATH)) {
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-cache',
+        });
+        res.end(fs.readFileSync(INDEX_HTML_PATH));
+        return;
+      }
+      if (INDEX_HTML_BUFFER) {
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-cache',
+        });
+        res.end(INDEX_HTML_BUFFER);
+        return;
+      }
     }
 
     if (pathname.endsWith('/')) {
@@ -86,13 +113,17 @@ const server = http.createServer((req, res) => {
 
     if (!fs.existsSync(filePath)) {
       // Fallback SPA para rotas da aplicação principal (exceto arquivos dentro de /iframes/)
-      if (!pathname.startsWith('/iframes/') && !path.extname(pathname)) {
-        filePath = path.join(PUBLIC_DIR, 'index.html');
-      } else {
-        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-        res.end(`404 Não Encontrado: ${pathname}`);
+      if (!pathname.startsWith('/iframes/') && !path.extname(pathname) && INDEX_HTML_BUFFER) {
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-cache',
+        });
+        res.end(INDEX_HTML_BUFFER);
         return;
       }
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end(`404 Não Encontrado: ${pathname}`);
+      return;
     }
 
     const ext = path.extname(filePath).toLowerCase();
@@ -115,15 +146,17 @@ const server = http.createServer((req, res) => {
     res.writeHead(500);
     res.end('Internal Server Error');
   }
-});
+}
 
-server.listen(PORT, () => {
-  console.log(`\n============================================================`);
-  console.log(`🌐 Hub Web (Simulador) rodando em: http://localhost:${PORT}`);
-  console.log(`🎭 Iframe Palco:                   http://localhost:${PORT}/iframes/palco/index.html`);
-  console.log(`🤖 Iframe Code (Upload Mode):      http://localhost:${PORT}/iframes/code/index.html`);
-  console.log(`============================================================\n`);
-});
+if (!isVercel && require.main === module) {
+  const server = http.createServer(requestHandler);
+  server.listen(PORT, () => {
+    console.log(`\n============================================================`);
+    console.log(`🌐 Hub Web (Simulador) rodando em: http://localhost:${PORT}`);
+    console.log(`🎭 Iframe Palco:                   http://localhost:${PORT}/iframes/palco/index.html`);
+    console.log(`🤖 Iframe Code (Upload Mode):      http://localhost:${PORT}/iframes/code/index.html`);
+    console.log(`============================================================\n`);
+  });
+}
 
-module.exports = server;
-
+module.exports = requestHandler;
