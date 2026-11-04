@@ -3,5 +3,7 @@ dist/
 .cache-repos/
 picode-palco/
 code_hub/
+.env
+.env.local
 .DS_Store
 Thumbs.db
