@@ -93,8 +93,11 @@ function requestHandler(req, res) {
 
     if (
       pathname === '/compilePiboard' ||
+      pathname === '/api/compilePiboard' ||
       pathname === '/compileEsp32' ||
+      pathname === '/api/compileEsp32' ||
       pathname === '/checkPythonSyntax' ||
+      pathname === '/api/checkPythonSyntax' ||
       pathname.startsWith('/api/compiler')
     ) {
       readRuntimeEnv();

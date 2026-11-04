@@ -1,5 +1,31 @@
 const https = require('https');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+function loadLocalEnvIfNeeded() {
+  if (process.env.COMPILER_API_URL && process.env.COMPILER_API_KEY) return;
+  const rootDir = path.resolve(__dirname, '..');
+  const envFiles = [
+    path.resolve(rootDir, '..', 'code_hub', '.env'),
+    path.join(rootDir, '.env'),
+  ];
+  for (const envPath of envFiles) {
+    if (!fs.existsSync(envPath)) continue;
+    const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIndex = trimmed.indexOf('=');
+      if (eqIndex === -1) continue;
+      const key = trimmed.slice(0, eqIndex).trim();
+      const val = trimmed.slice(eqIndex + 1).trim();
+      if (key && val && !process.env[key]) {
+        process.env[key] = val;
+      }
+    }
+  }
+}
 
 function collectRawBody(req) {
   if (Buffer.isBuffer(req.body)) {
@@ -19,7 +45,7 @@ function collectRawBody(req) {
   });
 }
 
-module.exports = async function handler(req, res) {
+async function proxyToCompiler(req, res, forcedEndpoint) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-API-KEY');
@@ -38,8 +64,14 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    loadLocalEnvIfNeeded();
+
     const parsedUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
-    const endpoint = parsedUrl.searchParams.get('endpoint') || parsedUrl.pathname.replace(/^\/api\/compiler\/?/, '/');
+    const queryEndpoint = (req.query && req.query.endpoint) || parsedUrl.searchParams.get('endpoint');
+    const pathEndpoint = parsedUrl.pathname
+      .replace(/^\/api\/compiler\/?/, '/')
+      .replace(/^\/api\//, '/');
+    const endpoint = forcedEndpoint || queryEndpoint || pathEndpoint;
 
     const baseUrl = (process.env.COMPILER_API_URL || '').trim().replace(/\/+$/, '');
     const apiKey = (process.env.COMPILER_API_KEY || '').trim();
@@ -55,7 +87,8 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const targetUrl = new URL(endpoint.startsWith('/') ? endpoint : `/${endpoint}`, `${baseUrl}/`);
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const targetUrl = new URL(`${baseUrl}${cleanEndpoint}`);
     const rawBody = await collectRawBody(req);
 
     const headers = {
@@ -111,8 +144,10 @@ module.exports = async function handler(req, res) {
       })
     );
   }
-};
+}
 
+module.exports = (req, res) => proxyToCompiler(req, res);
+module.exports.proxyToCompiler = proxyToCompiler;
 module.exports.config = {
   api: {
     bodyParser: false,

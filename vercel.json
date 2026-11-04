@@ -5,15 +5,15 @@
   "rewrites": [
     {
       "source": "/compilePiboard",
-      "destination": "/api/compiler?endpoint=/compilePiboard"
+      "destination": "/api/compilePiboard"
     },
     {
       "source": "/compileEsp32",
-      "destination": "/api/compiler?endpoint=/compileEsp32"
+      "destination": "/api/compileEsp32"
     },
     {
       "source": "/checkPythonSyntax",
-      "destination": "/api/compiler?endpoint=/checkPythonSyntax"
+      "destination": "/api/checkPythonSyntax"
     }
   ]
 }
