@@ -1,9 +1,6 @@
 const https = require('https');
 const http = require('http');
 
-const DEFAULT_COMPILER_API_URL = 'https://sixteen-clinic-crease.ngrok-free.dev';
-const DEFAULT_COMPILER_API_KEY = '0930716d-3f37-4132-988b-7c4748d5dbab';
-
 function collectRawBody(req) {
   if (Buffer.isBuffer(req.body)) {
     return Promise.resolve(req.body);
@@ -44,8 +41,19 @@ module.exports = async function handler(req, res) {
     const parsedUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
     const endpoint = parsedUrl.searchParams.get('endpoint') || parsedUrl.pathname.replace(/^\/api\/compiler\/?/, '/');
 
-    const baseUrl = (process.env.COMPILER_API_URL || DEFAULT_COMPILER_API_URL).replace(/\/+$/, '');
-    const apiKey = process.env.COMPILER_API_KEY || req.headers['x-api-key'] || DEFAULT_COMPILER_API_KEY;
+    const baseUrl = (process.env.COMPILER_API_URL || '').trim().replace(/\/+$/, '');
+    const apiKey = (process.env.COMPILER_API_KEY || '').trim();
+
+    if (!baseUrl || !apiKey) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(
+        JSON.stringify({
+          error: 'Variáveis de ambiente COMPILER_API_URL / COMPILER_API_KEY não configuradas no servidor.',
+        })
+      );
+      return;
+    }
 
     const targetUrl = new URL(endpoint.startsWith('/') ? endpoint : `/${endpoint}`, `${baseUrl}/`);
     const rawBody = await collectRawBody(req);

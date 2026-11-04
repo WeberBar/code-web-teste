@@ -15,10 +15,6 @@ const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
 const PORT = Number(process.env.PORT) || 3000;
 
 function readRuntimeEnv() {
-  const result = {
-    COMPILER_API_URL: process.env.COMPILER_API_URL || 'https://sixteen-clinic-crease.ngrok-free.dev',
-    COMPILER_API_KEY: process.env.COMPILER_API_KEY || '0930716d-3f37-4132-988b-7c4748d5dbab',
-  };
   const envFiles = [
     path.resolve(ROOT_DIR, '..', 'code_hub', '.env'),
     path.join(ROOT_DIR, '.env'),
@@ -34,12 +30,10 @@ function readRuntimeEnv() {
       const key = trimmed.slice(0, eqIndex).trim();
       const val = trimmed.slice(eqIndex + 1).trim();
       if (key && val) {
-        result[key] = val;
         process.env[key] = val;
       }
     }
   }
-  return result;
 }
 
 const isVercel = Boolean(process.env.VERCEL);
@@ -167,27 +161,6 @@ function requestHandler(req, res) {
 
     const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-
-    if (ext === '.html' && pathname.startsWith('/iframes/code/')) {
-      const runtimeEnv = readRuntimeEnv();
-      const clientEnv = {
-        ...runtimeEnv,
-        COMPILER_API_URL: '',
-      };
-      const envScript = `<script>window.__PICODE_ENV__=${JSON.stringify(clientEnv)};</script>`;
-      let html = fs.readFileSync(filePath, 'utf8');
-      if (html.includes('</head>')) {
-        html = html.replace('</head>', `${envScript}</head>`);
-      } else {
-        html = `${envScript}${html}`;
-      }
-      res.writeHead(200, {
-        'Content-Type': contentType,
-        'Cache-Control': 'no-cache',
-      });
-      res.end(html);
-      return;
-    }
 
     res.writeHead(200, {
       'Content-Type': contentType,
