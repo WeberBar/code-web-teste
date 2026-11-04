@@ -1,5 +1,19 @@
 {
   "framework": null,
   "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/compilePiboard",
+      "destination": "/api/compiler?endpoint=/compilePiboard"
+    },
+    {
+      "source": "/compileEsp32",
+      "destination": "/api/compiler?endpoint=/compileEsp32"
+    },
+    {
+      "source": "/checkPythonSyntax",
+      "destination": "/api/compiler?endpoint=/checkPythonSyntax"
+    }
+  ]
 }

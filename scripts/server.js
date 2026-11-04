@@ -8,6 +8,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { buildAllIframes } = require('./build-iframes');
+const compilerProxy = require('../api/compiler');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
@@ -15,8 +16,8 @@ const PORT = Number(process.env.PORT) || 3000;
 
 function readRuntimeEnv() {
   const result = {
-    COMPILER_API_URL: process.env.COMPILER_API_URL || 'http://localhost:8081',
-    COMPILER_API_KEY: process.env.COMPILER_API_KEY || '',
+    COMPILER_API_URL: process.env.COMPILER_API_URL || 'https://sixteen-clinic-crease.ngrok-free.dev',
+    COMPILER_API_KEY: process.env.COMPILER_API_KEY || '0930716d-3f37-4132-988b-7c4748d5dbab',
   };
   const envFiles = [
     path.resolve(ROOT_DIR, '..', 'code_hub', '.env'),
@@ -34,6 +35,7 @@ function readRuntimeEnv() {
       const val = trimmed.slice(eqIndex + 1).trim();
       if (key && val) {
         result[key] = val;
+        process.env[key] = val;
       }
     }
   }
@@ -94,6 +96,16 @@ function requestHandler(req, res) {
   try {
     const parsedUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
     let pathname = decodeURIComponent(parsedUrl.pathname);
+
+    if (
+      pathname === '/compilePiboard' ||
+      pathname === '/compileEsp32' ||
+      pathname === '/checkPythonSyntax' ||
+      pathname.startsWith('/api/compiler')
+    ) {
+      readRuntimeEnv();
+      return compilerProxy(req, res);
+    }
 
     // Redireciona /iframes/palco -> /iframes/palco/ para preservar caminhos relativos
     if (pathname === '/iframes/palco' || pathname === '/iframes/code') {
@@ -158,7 +170,11 @@ function requestHandler(req, res) {
 
     if (ext === '.html' && pathname.startsWith('/iframes/code/')) {
       const runtimeEnv = readRuntimeEnv();
-      const envScript = `<script>window.__PICODE_ENV__=${JSON.stringify(runtimeEnv)};</script>`;
+      const clientEnv = {
+        ...runtimeEnv,
+        COMPILER_API_URL: '',
+      };
+      const envScript = `<script>window.__PICODE_ENV__=${JSON.stringify(clientEnv)};</script>`;
       let html = fs.readFileSync(filePath, 'utf8');
       if (html.includes('</head>')) {
         html = html.replace('</head>', `${envScript}</head>`);
