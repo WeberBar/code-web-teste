@@ -77,7 +77,10 @@ function removeDirSync(dirPath) {
 function resolveRepoDir(target) {
   for (const candidate of target.candidates) {
     if (fs.existsSync(path.join(candidate, 'package.json'))) {
-      return candidate;
+      const hasWebpack = fs.existsSync(path.join(candidate, 'node_modules', 'webpack', 'bin', 'webpack.js'));
+      if (hasWebpack || !fs.existsSync(path.join(target.outputDir, 'index.html'))) {
+        return candidate;
+      }
     }
   }
   // Em ambientes de deploy (ex: Vercel) onde os repositórios privados irmãos não estão presentes,

@@ -13,6 +13,33 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
 const PORT = Number(process.env.PORT) || 3000;
 
+function readRuntimeEnv() {
+  const result = {
+    COMPILER_API_URL: process.env.COMPILER_API_URL || 'http://localhost:8081',
+    COMPILER_API_KEY: process.env.COMPILER_API_KEY || '',
+  };
+  const envFiles = [
+    path.resolve(ROOT_DIR, '..', 'code_hub', '.env'),
+    path.join(ROOT_DIR, '.env'),
+  ];
+  for (const envPath of envFiles) {
+    if (!fs.existsSync(envPath)) continue;
+    const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIndex = trimmed.indexOf('=');
+      if (eqIndex === -1) continue;
+      const key = trimmed.slice(0, eqIndex).trim();
+      const val = trimmed.slice(eqIndex + 1).trim();
+      if (key && val) {
+        result[key] = val;
+      }
+    }
+  }
+  return result;
+}
+
 const isVercel = Boolean(process.env.VERCEL);
 const skipBuild = process.argv.includes('--skip-build') || isVercel;
 
@@ -128,6 +155,23 @@ function requestHandler(req, res) {
 
     const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+
+    if (ext === '.html' && pathname.startsWith('/iframes/code/')) {
+      const runtimeEnv = readRuntimeEnv();
+      const envScript = `<script>window.__PICODE_ENV__=${JSON.stringify(runtimeEnv)};</script>`;
+      let html = fs.readFileSync(filePath, 'utf8');
+      if (html.includes('</head>')) {
+        html = html.replace('</head>', `${envScript}</head>`);
+      } else {
+        html = `${envScript}${html}`;
+      }
+      res.writeHead(200, {
+        'Content-Type': contentType,
+        'Cache-Control': 'no-cache',
+      });
+      res.end(html);
+      return;
+    }
 
     res.writeHead(200, {
       'Content-Type': contentType,
