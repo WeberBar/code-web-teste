@@ -279,12 +279,27 @@
     setTimeout(() => triggerIframeResize(activeIframe), 150);
   }
 
+  function releaseIframeSerial(iframe) {
+    try {
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({ type: 'picode:release-serial' }, '*');
+      }
+    } catch (e) {
+      // ignora
+    }
+  }
+
   function closeFullscreenIde() {
     fullscreenIdeOverlay.classList.remove('active');
+    releaseIframeSerial(iframePalco);
+    releaseIframeSerial(iframeCode);
   }
 
   function setCodeMode(mode) {
     activeCodeMode = mode === 'code' ? 'code' : 'palco';
+
+    const inactiveIframe = activeCodeMode === 'palco' ? iframeCode : iframePalco;
+    releaseIframeSerial(inactiveIframe);
 
     iframePalco.classList.toggle('active', activeCodeMode === 'palco');
     iframeCode.classList.toggle('active', activeCodeMode === 'code');

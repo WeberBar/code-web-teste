@@ -9,24 +9,6 @@ const { spawnSync } = require('child_process');
 const ROOT_DIR = path.resolve(__dirname, '..');
 const PUBLIC_IFRAMES_DIR = path.join(ROOT_DIR, 'public', 'iframes');
 
-// Carrega .env da raiz do hub-web (se existir) para process.env antes de compilar os iframes
-(function loadDotEnv() {
-  const envPath = path.join(ROOT_DIR, '.env');
-  if (!fs.existsSync(envPath)) return;
-  const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const eqIndex = trimmed.indexOf('=');
-    if (eqIndex === -1) continue;
-    const key = trimmed.slice(0, eqIndex).trim();
-    const value = trimmed.slice(eqIndex + 1).trim();
-    if (key && !(key in process.env)) {
-      process.env[key] = value;
-    }
-  }
-})();
-
 const TARGETS = [
   {
     id: 'palco',
@@ -139,6 +121,8 @@ function buildTarget(target) {
     BUILD_MODE: 'standalone',
     ROOT: '',
     CI: 'true',
+    COMPILER_API_URL: '',
+    COMPILER_API_KEY: '',
     NODE_OPTIONS: '--openssl-legacy-provider --max-old-space-size=4096',
   };
 
