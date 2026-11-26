@@ -987,22 +987,6 @@ body.dark-mode {
   opacity: 1;
 }
 
-.ide-top-right-controls {
-  position: fixed;
-  top: 0;
-  right: 14px;
-  height: 3rem;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 200;
-  pointer-events: none;
-}
-
-.fullscreen-ide-overlay.active .ide-top-right-controls {
-  pointer-events: auto;
-}
-
 .codelab-mode-switcher {
   display: inline-flex;
   align-items: center;
@@ -1036,32 +1020,6 @@ body.dark-mode {
 .mode-switch-btn.active {
   background-color: var(--codelab-dark);
   color: #ffffff;
-}
-
-.ide-exit-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  border: none;
-  background: transparent;
-  color: #d92d20;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background-color 0.18s ease, transform 0.18s ease;
-}
-
-.ide-exit-btn:hover {
-  background-color: #fef3f2;
-  transform: scale(1.08);
-}
-
-.ide-top-right-controls.modal-open {
-  display: none !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
 }
 
 .codelab-editor-stage {
